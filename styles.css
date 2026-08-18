@@ -1,0 +1,165 @@
+/* styles.css - Material-inspired clinical UI (no external deps required)
+   Diseño: tarjetas con elevación, botones prominentes, espaciado y tipografía clara
+*/
+:root{
+  /* Paleta celeste */
+  --celeste-50:  #f0fbff;
+  --celeste-100: #dff6ff;
+  --celeste-200: #bfeefe;
+  --celeste-300: #9fe6fd;
+  --celeste-400: #5fd6fb;
+  --celeste-500: #22b8ff; /* color principal celeste */
+  --celeste-600: #0ea5e9;
+  --celeste-700: #0284c7;
+
+  --md-bg: var(--celeste-50);
+  --md-surface: #ffffff;
+  --md-primary: var(--celeste-500);
+  --md-on-primary: #ffffff;
+  --md-error: #b00020;
+  --md-warning: #ffb300;
+  --md-success: #0f9d58;
+  --md-text: #0f1724;
+  --md-muted: #556072;
+  --elevation-1: 0 1px 3px rgba(16,24,40,0.06), 0 1px 2px rgba(16,24,40,0.04);
+  --elevation-2: 0 6px 12px rgba(16,24,40,0.10), 0 2px 6px rgba(16,24,40,0.06);
+  --radius: 12px;
+  --max-width: 1100px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background:var(--md-bg);
+  color:var(--md-text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+.container{max-width:var(--max-width);margin:18px auto;padding:16px}
+.app-header{background:linear-gradient(90deg,#e8f0ff,#ffffff);padding:18px;border-radius:14px;box-shadow:var(--elevation-1);margin:8px}
+.header-inner{max-width:var(--max-width);margin:0 auto}
+h1{margin:0;font-size:1.4rem;font-weight:700}
+.subtitle{margin:6px 0;color:var(--md-muted);font-weight:500}
+.warning{background:#fff8e1;color:#6b3b00;padding:10px;border-radius:8px;font-size:0.95rem;margin-top:10px;border-left:4px solid var(--md-warning)}
+
+.card{background:var(--md-surface);padding:18px;margin:14px 0;border-radius:var(--radius);box-shadow:var(--elevation-1)}
+.card h2{margin:0 0 8px 0;font-size:1.05rem}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.grid-columns{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:12px}
+label{display:flex;flex-direction:column;font-weight:600;font-size:0.95rem}
+input,select,textarea{
+  padding:14px 12px;border:1px solid transparent;border-radius:10px;margin-top:8px;font-size:0.98rem;background:linear-gradient(180deg,#fff,#fbfdff);color:var(--md-text);box-shadow:inset 0 1px 0 rgba(16,24,40,0.02)
+}
+input::placeholder, textarea::placeholder{color:rgba(15,23,36,0.35)}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%, rgba(0,0,0,0.4) 50%), linear-gradient(135deg, rgba(0,0,0,0.4) 50%, transparent 50%);background-position:calc(100% - 18px) calc(1em + 2px), calc(100% - 13px) calc(1em + 2px);background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:40px}
+fieldset.checkbox-group{border:none;padding:0;margin-top:12px}
+.checkbox-group label{display:block;margin:6px 0}
+/* Etiqueta especializada para checkbox custom */
+.checkbox{display:flex;align-items:center;gap:12px;font-weight:500;padding:8px;border-radius:10px;position:relative}
+/* ocultar el checkbox nativo pero mantenerlo accesible */
+.checkbox input[type="checkbox"]{position:absolute;opacity:0;width:20px;height:20px;margin:0;left:8px}
+.checkbox .checkmark{width:22px;height:22px;border-radius:6px;border:2px solid var(--celeste-300);background:linear-gradient(180deg,#fff,#fbfdff);display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px;margin-right:6px;transition:all .12s ease}
+.checkbox .checkmark::after{content:'';width:8px;height:12px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) scale(0);transition:transform .12s ease}
+.checkbox input[type="checkbox"]:checked + .checkmark{background:linear-gradient(180deg,var(--celeste-500),var(--celeste-600));border-color:var(--celeste-600)}
+.checkbox input[type="checkbox"]:checked + .checkmark::after{transform:rotate(45deg) scale(1)}
+.checkbox input[type="checkbox"]:focus + .checkmark{box-shadow:0 0 0 6px rgba(34,184,255,0.10)}
+.checkbox .cb-text{margin-left:4px;color:var(--md-text);font-weight:500}
+/* mejorar objetivo táctil: que todo el label sea clicable */
+.checkbox{cursor:pointer}
+
+/* estado hover y focus para controles */
+input:focus, select:focus, textarea:focus{border-color:rgba(34,184,255,0.35);box-shadow:0 6px 18px rgba(34,184,255,0.08)}
+
+/* inputs y selects grandes para uso en guardia */
+input,select,textarea{min-height:44px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* Material button system */
+.md-btn, button{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:44px;padding:10px 16px;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:0.95rem;
+  line-height:1;letter-spacing:0.2px;transition:box-shadow .14s ease,transform .12s ease,background-color .12s ease,opacity .12s ease;color:var(--md-text);
+  background:transparent;color:var(--md-text);
+}
+
+/* Contained (primary) */
+.md-btn--contained{background:linear-gradient(180deg,var(--celeste-500),var(--celeste-600));color:var(--md-on-primary);box-shadow:var(--elevation-2)}
+.md-btn--contained:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(15, 98, 172, 0.14)}
+.md-btn--contained:active{transform:translateY(0);box-shadow:var(--elevation-1)}
+
+/* Outlined */
+.md-btn--outlined{background:transparent;border:1px solid rgba(34,184,255,0.16);color:var(--celeste-700)}
+.md-btn--outlined:hover{background:var(--celeste-100)}
+
+/* Text button */
+.md-btn--text{background:transparent;border:0;color:var(--celeste-700);padding:8px 12px}
+.md-btn--text:hover{background:rgba(34,184,255,0.06)}
+
+/* Danger variant */
+.md-btn--danger.md-btn--contained{background:linear-gradient(180deg,#d64550,#b00020);color:#fff}
+
+/* Disabled */
+.md-btn:disabled, .md-btn[disabled]{opacity:0.48;cursor:not-allowed;box-shadow:none}
+
+/* Ensure buttons are focusable and show ring */
+.md-btn:focus{outline:none;box-shadow:0 6px 18px rgba(34,184,255,0.12)}
+
+.result-card{background:linear-gradient(180deg,#ffffff,#fbfdff);padding:16px;border-radius:12px;margin:12px 0;box-shadow:var(--elevation-2)}
+.classification{font-size:1.2rem;font-weight:800;margin:6px 0}
+.risk-level{font-weight:700;color:var(--md-muted);margin-bottom:8px}
+.criteria ul{padding-left:18px}
+.criteria li{margin:6px 0}
+.hidden{display:none}
+.compare{width:100%;border-collapse:collapse}
+.compare th,.compare td{border:1px solid #eef4ff;padding:8px;text-align:center}
+.whyContent{white-space:pre-wrap;background:#fbfdff;padding:12px;border-radius:8px;border:1px solid #eef4ff}
+
+/* Severity visual accents */
+.severity-LEVE{border-left:8px solid var(--md-success);padding-left:12px}
+.severity-MODERADA{border-left:8px solid var(--celeste-500);padding-left:12px}
+.severity-GRAVE{border-left:8px solid var(--md-error);padding-left:12px}
+
+/* Small screens */
+@media (max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .grid-columns{grid-template-columns:1fr}
+  .container{padding:12px}
+}
+
+/* Print styles */
+@media print{
+  body{background:#fff;color:#000}
+  button,.actions, .footer, input, select, details{display:none}
+  .container{max-width:800px}
+  .card{box-shadow:none}
+}
+
+/* Accessibility focus styles */
+input:focus,select:focus,button:focus{outline:3px solid rgba(21,101,192,0.18);outline-offset:2px}
+
+small{color:var(--md-muted)}
+/* Material refinements: ripple effect and component polishing */
+.ripple{position:absolute;border-radius:50%;transform:scale(0);pointer-events:none;background:rgba(255,255,255,0.55);opacity:0.9}
+.md-btn--contained .ripple{background:rgba(255,255,255,0.45)}
+.md-btn--outlined .ripple,.md-btn--text .ripple{background:rgba(2,132,199,0.12)}
+.md-btn--danger .ripple{background:rgba(255,255,255,0.45)}
+.ripple-fast{animation:ripple 640ms linear}
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+.btn-icon{display:inline-flex;align-items:center;justify-content:center}
+.material-button{position:relative;overflow:hidden}
+.material-button:focus{outline: none; box-shadow:0 8px 24px rgba(34,184,255,0.12)}
+
+/* Improve selects appearance further for Material look */
+select{background:linear-gradient(180deg,#fff,#fbfdff);padding:12px 40px 12px 12px;border-radius:8px;border:1px solid rgba(15,23,36,0.06)}
+
+/* Tweak card headers and result emphasis */
+.result-card h2{margin-top:0}
+.classification{letter-spacing:0.4px}
+
+/* Ensure buttons used in UI get material-button class behavior */
+button{position:relative;overflow:hidden}
+
+/* minor polish for table and lists */
+.compare th{background:var(--celeste-100)}
+.criteria li{padding:4px 0}
