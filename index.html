@@ -23,6 +23,25 @@
           <label>Edad (años)
             <input type="number" id="edad" min="0" step="1" required>
           </label>
+
+          <label id="adultSexoLabel">Sexo (adultos)
+            <select id="sexo" disabled>
+              <option value="">--</option>
+              <option value="hombre">Hombre</option>
+              <option value="mujer">Mujer</option>
+            </select>
+           
+          </label>
+
+          <label id="adultTallaLabel">Talla (cm) (adultos)
+            <input type="number" id="talla" min="0" step="0.1" disabled>
+            
+          </label>
+          
+          <label id="pesoLabel">Peso (kg)
+            <input type="number" id="peso" min="0" step="0.1">
+            <div class="muted">Indique peso para cálculo de dosis pediátricas (si disponible)</div>
+          </label>
         </div>
 
         <fieldset class="checkbox-group">
@@ -47,6 +66,7 @@
               <option value="intensa">Intensa</option>
               <option value="muy_intensa">Muy intensa</option>
             </select>
+            <div id="disneaAdvice" class="muted">Seleccione un nivel para ver indicaciones.</div>
           </label>
 
           <label>Habla
@@ -113,8 +133,8 @@
         </div>
       </section>
 
-      <section class="card">
-        <h2>Función pulmonar</h2>
+      <section id="funcionSection" class="card">
+        <h2>Función pulmonar <small>(Opcional — útil si dispone de PEF/FEV1)</small></h2>
         <div class="grid">
           <label>Seleccionar medida
             <select id="funcion_tipo">
@@ -154,6 +174,7 @@
         <h2>CLASIFICACIÓN</h2>
         <div id="classificationTitle" class="classification">—</div>
         <div id="riskLevel" class="risk-level">Nivel de riesgo: —</div>
+        <div id="reevalNotice" class="muted" aria-live="polite"></div>
 
         <div class="criteria">
           <h3>Criterios detectados</h3>
@@ -196,6 +217,7 @@
               <option value="intensa">Intensa</option>
               <option value="muy_intensa">Muy intensa</option>
             </select>
+            <div id="r_disneaAdvice" class="muted">Seleccione un nivel para ver indicaciones.</div>
           </label>
 
           <label>Habla
