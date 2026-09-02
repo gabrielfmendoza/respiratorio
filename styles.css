@@ -45,6 +45,7 @@ h1{margin:0;font-size:1.4rem;font-weight:700}
 
 .card{background:var(--md-surface);padding:18px;margin:14px 0;border-radius:var(--radius);box-shadow:var(--elevation-1)}
 .card h2{margin:0 0 8px 0;font-size:1.05rem}
+.algorithm-picker{border:1px solid rgba(34,184,255,0.18);background:linear-gradient(180deg,#ffffff,#f7fcff)}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .grid-columns{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:12px}
 label{display:flex;flex-direction:column;font-weight:600;font-size:0.95rem}
@@ -161,6 +162,7 @@ select{background:linear-gradient(180deg,#fff,#fbfdff);padding:12px 40px 12px 12
 /* Tweak card headers and result emphasis */
 .result-card h2{margin-top:0}
 .classification{letter-spacing:0.4px}
+.algorithm-picker select{max-width:320px}
 
 /* Ensure buttons used in UI get material-button class behavior */
 button{position:relative;overflow:hidden}

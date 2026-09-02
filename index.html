@@ -3,20 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Calculadora de Exacerbación de Asma</title>
+  <title>Algoritmos Respiratorios</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="app-header">
     <div class="header-inner">
-      <h1>Calculadora de Exacerbación de Asma</h1>
-      <p class="subtitle">Evaluación inicial y respuesta al tratamiento</p>
+      <h1 id="appTitle">Calculadora de Exacerbación de Asma</h1>
+      <p id="appSubtitle" class="subtitle">Evaluación inicial y respuesta al tratamiento</p>
       <p class="warning">Herramienta de apoyo a la evaluación clínica. No reemplaza el juicio médico ni los protocolos institucionales vigentes.</p>
     </div>
   </header>
 
   <main class="container">
     <form id="calcForm" novalidate>
+      <section class="card algorithm-picker">
+        <h2>Algoritmo</h2>
+        <div class="grid">
+          <label>Seleccione el algoritmo a utilizar
+            <select id="algoritmo">
+              <option value="asma">Asma</option>
+              <option value="neumonia">Neumonía</option>
+            </select>
+          </label>
+        </div>
+        <div class="muted">La reevaluación dinámica postratamiento se mantiene solo para asma.</div>
+      </section>
+
       <section class="card">
         <h2>Datos del paciente</h2>
         <div class="grid">
@@ -44,7 +57,7 @@
           </label>
         </div>
 
-        <fieldset class="checkbox-group">
+        <fieldset class="checkbox-group asma-only">
           <legend>Antecedentes relevantes (factores de riesgo)</legend>
           <label class="checkbox"><input type="checkbox" id="ant1"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Crisis asmática grave previa</span></label>
           <label class="checkbox"><input type="checkbox" id="ant3"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Ingreso previo a UCI</span></label>
@@ -55,7 +68,7 @@
         </fieldset>
       </section>
 
-      <section class="card">
+      <section class="card asma-only">
         <h2>Evaluación clínica inicial</h2>
         <div class="grid-columns">
           <label>Disnea
@@ -115,6 +128,134 @@
         </div>
       </section>
 
+      <section class="card neumonia-only hidden">
+        <h2>Evaluación clínica inicial de neumonía</h2>
+        <div class="grid-columns">
+          <label>Sexo
+            <select id="neu_sexo">
+              <option value="">--</option>
+              <option value="hombre">Hombre</option>
+              <option value="mujer">Mujer</option>
+            </select>
+          </label>
+
+          <label>Fiebre
+            <select id="neu_fiebre">
+              <option value="">--</option>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+
+          <label>Tos
+            <select id="neu_tos">
+              <option value="">--</option>
+              <option value="no">No</option>
+              <option value="seca">Seca</option>
+              <option value="productiva">Productiva</option>
+            </select>
+          </label>
+
+          <label>Expectoración
+            <select id="neu_expectoracion">
+              <option value="">--</option>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+
+          <label>Dolor torácico pleurítico
+            <select id="neu_dolor">
+              <option value="">--</option>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+
+          <label>Dificultad respiratoria
+            <select id="neu_dificultad">
+              <option value="">--</option>
+              <option value="no">No</option>
+              <option value="leve">Leve</option>
+              <option value="moderada">Moderada</option>
+              <option value="marcada">Marcada</option>
+            </select>
+          </label>
+
+          <label>Compromiso del sensorio
+            <select id="neu_confusion">
+              <option value="">--</option>
+              <option value="no">No</option>
+              <option value="si">Sí</option>
+            </select>
+          </label>
+
+          <label>Radiografía / infiltrado
+            <select id="neu_infiltrado">
+              <option value="">--</option>
+              <option value="compatible">Compatible con neumonía</option>
+              <option value="pendiente">Pendiente / no disponible</option>
+              <option value="no_compatible">No compatible</option>
+            </select>
+          </label>
+        </div>
+
+        <fieldset class="checkbox-group">
+          <legend>Datos clínicos y contexto</legend>
+          <label class="checkbox"><input type="checkbox" id="neu_comorb"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Comorbilidades relevantes</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_intolerancia"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Deshidratación o intolerancia a la vía oral</span></label>
+        </fieldset>
+      </section>
+
+      <section class="card neumonia-only hidden">
+        <h2>Estratificación: CURB-65</h2>
+        <div class="grid-columns">
+          <label>Temperatura (°C)
+            <input type="number" id="neu_temp" step="0.1">
+          </label>
+
+          <label>BUN (mg/dl)
+            <input type="number" id="neu_bun" step="0.1">
+          </label>
+
+          <label>Urea (mg/dl)
+            <input type="number" id="neu_urea" step="0.1">
+          </label>
+        </div>
+      </section>
+
+      <section class="card neumonia-only hidden">
+        <h2>Criterios de UCI y multirresistencia</h2>
+        <div class="grid-columns">
+          <label>PaO₂ / FiO₂
+            <input type="number" id="neu_pafi" step="1">
+          </label>
+        </div>
+
+        <fieldset class="checkbox-group">
+          <legend>ATS/IDSA: criterios mayores y menores</legend>
+          <label class="checkbox"><input type="checkbox" id="neu_ats_ventilacion"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Ventilación mecánica invasiva</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_ats_vasopresores"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Necesidad de vasopresores</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_ats_multilobar"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Infiltrados en varios lóbulos</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_ats_leucopenia"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Leucocitos &lt; 4.000/mm³</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_ats_trombocitopenia"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Plaquetas &lt; 100.000/mm³</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_ats_fluidos"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Hipotensión con necesidad de fluidoterapia agresiva</span></label>
+        </fieldset>
+
+        <fieldset class="checkbox-group">
+          <legend>PES y gérmenes multirresistentes</legend>
+          <label class="checkbox"><input type="checkbox" id="neu_pes_respiratorio"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Trastorno respiratorio crónico</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_pes_renal_cronica"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Insuficiencia renal crónica</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_pseudo_abx90"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Antibióticos en los últimos 90 días</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_pseudo_hosp_rec"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Hospitalización reciente</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_pseudo_corticoides"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Corticoides orales crónicos</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_pseudo_epoc"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">EPOC grave</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_pseudo_prev"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Aislamiento previo de Pseudomonas</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_pseudo_bronq"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Bronquiectasias, fibrosis quística o malnutrición</span></label>
+          <label class="checkbox"><input type="checkbox" id="neu_absceso_empiema"><span class="checkmark" aria-hidden="true"></span><span class="cb-text">Absceso pulmonar o empiema pleural</span></label>
+        </fieldset>
+      </section>
+
       <section class="card">
         <h2>Constantes vitales</h2>
         <div class="grid">
@@ -127,13 +268,16 @@
           <label>Presión arterial sistólica (mmHg)
             <input type="number" id="pas" min="0" step="1">
           </label>
+          <label>Presión arterial diastólica (mmHg)
+            <input type="number" id="pad" min="0" step="1">
+          </label>
           <label>Saturación O₂ (%)
             <input type="number" id="sat" min="0" max="100" step="0.1">
           </label>
         </div>
       </section>
 
-      <section id="funcionSection" class="card">
+      <section id="funcionSection" class="card asma-only">
         <h2>Función pulmonar <small>(Opcional — útil si dispone de PEF/FEV1)</small></h2>
         <div class="grid">
           <label>Seleccionar medida
@@ -152,7 +296,7 @@
         <div id="pefCalc" class="calc-output" aria-live="polite"></div>
       </section>
 
-      <section class="card optional">
+      <section class="card optional asma-only">
         <h2>Gasometría (opcional)</h2>
         <div class="grid">
             <label>PaCO₂ (mmHg)

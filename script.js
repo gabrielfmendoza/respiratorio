@@ -23,6 +23,81 @@ const PROTOCOL = {
   nebulizationExample: "Salbutamol 20 gotas + Ipratropio 40 gotas cada 20 minutos"
 };
 
+const ALGORITHM_COPY = {
+  asma: {
+    documentTitle: 'Calculadora de Exacerbación de Asma',
+    title: 'Calculadora de Exacerbación de Asma',
+    subtitle: 'Evaluación inicial y respuesta al tratamiento'
+  },
+  neumonia: {
+    documentTitle: 'Algoritmo Inicial de Neumonía',
+    title: 'Algoritmo Inicial de Neumonía',
+    subtitle: 'Estratificación clínica inicial y orientación de manejo'
+  }
+};
+
+const PNEUMONIA_PROTOCOL = {
+  oxygenTarget: 92,
+  curbBUN: 20,
+  curbUrea: 44,
+  curbFr: 30,
+  curbAge: 65,
+  hypotensionPas: 90,
+  hypotensionPad: 60,
+  atsPafi: 250,
+  atsMinorThreshold: 3,
+  pesThreshold: 5
+};
+
+const PNEUMONIA_TREATMENT = {
+  initialTests: [
+    'Solicitar analítica inicial y radiografía de tórax para confirmar o descartar NAC.',
+    'Administrar la primera dosis de antibiótico de forma precoz, idealmente dentro de las primeras 6 horas.'
+  ],
+  ambulatory: [
+    'No se requieren más pruebas complementarias además de la evaluación inicial, si la evolución clínica es estable.',
+    'Alta médica con manejo ambulatorio y control clínico precoz.',
+    'Opciones antibióticas VO: levofloxacino o moxifloxacino en monoterapia.',
+    'Alternativa VO: amoxicilina, amoxicilina/clavulánico o cefditoren + azitromicina o claritromicina.'
+  ],
+  observation: [
+    'CURB-65 = 2: valorar internación corta / observación estrecha.',
+    'Si precisa ingreso, ampliar estudio microbiológico y monitorización en las primeras horas.',
+    'Si evoluciona favorable y el contexto lo permite, definir alta o ingreso breve según reevaluación clínica.'
+  ],
+  microbiology: [
+    'Ampliar estudio microbiológico con esputo, hemocultivos y antígeno urinario para neumococo/Legionella.',
+    'Añadir marcadores de gravedad como PCR y procalcitonina según disponibilidad.'
+  ],
+  hospital: [
+    'Internación hospitalaria.',
+    'Quinolona VO/IV: levofloxacino o moxifloxacino.',
+    'Alternativa: ceftriaxona o ceftarolina + azitromicina o claritromicina VO/IV.'
+  ],
+  icu: [
+    'Ingreso en UCI.',
+    'Betalactámico IV + macrólido VO/IV o quinolona IV.',
+    'Opciones: ceftriaxona, cefotaxima o ceftarolina + azitromicina/claritromicina, o levofloxacino/moxifloxacino.'
+  ],
+  corticosteroids: [
+    'En NAC grave que requiere UCI, los corticoides adyuvantes pueden valorarse según contexto clínico y comorbilidades concomitantes.'
+  ],
+  multiresistant: [
+    'PES ≥ 5: considerar cobertura empírica para multirresistentes con meropenem + levofloxacino + ceftarolina o linezolid.'
+  ],
+  pseudomonas: [
+    'Sospecha de Pseudomonas: siempre doble cobertura IV con un betalactámico antipseudomónico + quinolona o aminoglucósido.',
+    'Opciones de betalactámico: ceftazidima, piperacilina/tazobactam, meropenem o aztreonam si alergia a betalactámicos.'
+  ],
+  anaerobes: [
+    'Si hay absceso pulmonar o empiema pleural, añadir cobertura frente a anaerobios.',
+    'Opciones: amoxicilina/ácido clavulánico IV, moxifloxacino, clindamicina o ertapenem.'
+  ],
+  notConfirmed: [
+    'La radiografía no confirma NAC. Reevaluar el diagnóstico y completar estudios según hallazgos clínicos.'
+  ]
+};
+
 // Predicted PEF reference table (semFYC). Usado para completar "Valor predicho/teórico" cuando hay talla+sexo+edad.
 const PREDICTED_PEF = {
   ages: [15,20,25,30,35,40,45,50,55,60,65,70],
@@ -230,6 +305,121 @@ function showMessage(msg){
   alert(msg);
 }
 
+function getSelectedAlgorithm(){
+  const selector = $('algoritmo');
+  return selector ? selector.value : 'asma';
+}
+
+function clearRenderedState(){
+  $('classificationTitle').textContent = '—';
+  $('riskLevel').textContent = 'Nivel de riesgo: —';
+  $('reevalNotice').textContent = '';
+  $('criteriaList').innerHTML = '';
+  $('treatmentContent').innerHTML = '';
+  $('oxygenAdvice').textContent = '';
+  $('magnesiumAdvice').textContent = '';
+  $('icuAdvice').textContent = '';
+  $('whyContent').textContent = '';
+  $('admissionList').innerHTML = '';
+  $('icuList').innerHTML = '';
+  $('reevalSection').classList.add('hidden');
+  $('reevalResult').classList.add('hidden');
+  $('reevalClassification').textContent = '';
+  $('reevalCriteria').textContent = '';
+  const responseEl = $('responseResult');
+  responseEl.textContent = '';
+  responseEl.style.color = '';
+  if($('pefCalc')){
+    $('pefCalc').textContent = getSelectedAlgorithm() === 'asma'
+      ? ''
+      : 'Función pulmonar disponible solo para el algoritmo de asma.';
+  }
+  window.__initial = null;
+  window.__lastSeverity = null;
+}
+
+function toggleAlgorithmElements(className, visible){
+  document.querySelectorAll('.' + className).forEach((el) => {
+    el.classList.toggle('hidden', !visible);
+  });
+}
+
+function updateAgeSensitiveFields(){
+  const age = parseNumber($('edad') ? $('edad').value : null);
+  const algorithm = getSelectedAlgorithm();
+  const isAdult = age !== null && age >= 15;
+  const isPediatric = age !== null && age < 15;
+  const adultSexoLabel = $('adultSexoLabel');
+  const adultTallaLabel = $('adultTallaLabel');
+  const pesoLabel = $('pesoLabel');
+  const sexoEl = $('sexo');
+  const tallaEl = $('talla');
+  const pesoEl = $('peso');
+  const funcionSection = $('funcionSection');
+
+  if(algorithm !== 'asma'){
+    if(adultSexoLabel) adultSexoLabel.style.display = 'none';
+    if(adultTallaLabel) adultTallaLabel.style.display = 'none';
+    if(sexoEl){ sexoEl.value = ''; sexoEl.disabled = true; }
+    if(tallaEl){ tallaEl.value = ''; tallaEl.disabled = true; }
+    if(pesoLabel) pesoLabel.style.display = 'none';
+    if(pesoEl){ pesoEl.value = ''; pesoEl.disabled = true; }
+    if(funcionSection){
+      funcionSection.querySelectorAll('input,select').forEach((el) => { el.value = ''; el.disabled = true; });
+      funcionSection.style.display = 'none';
+    }
+    if($('pefCalc')) $('pefCalc').textContent = 'Función pulmonar disponible solo para el algoritmo de asma.';
+    return;
+  }
+
+  if(isAdult){
+    if(adultSexoLabel) adultSexoLabel.style.display = '';
+    if(adultTallaLabel) adultTallaLabel.style.display = '';
+    if(sexoEl) sexoEl.disabled = false;
+    if(tallaEl) tallaEl.disabled = false;
+    if(pesoLabel) pesoLabel.style.display = 'none';
+    if(pesoEl){ pesoEl.value = ''; pesoEl.disabled = true; }
+    if(funcionSection){
+      funcionSection.style.display = '';
+      funcionSection.querySelectorAll('input,select').forEach((el) => { el.disabled = false; });
+    }
+    updatePredictedField();
+    return;
+  }
+
+  if(adultSexoLabel) adultSexoLabel.style.display = 'none';
+  if(adultTallaLabel) adultTallaLabel.style.display = 'none';
+  if(sexoEl){ sexoEl.value = ''; sexoEl.disabled = true; }
+  if(tallaEl){ tallaEl.value = ''; tallaEl.disabled = true; }
+  if(pesoLabel){
+    if(isPediatric){
+      pesoLabel.style.display = '';
+      if(pesoEl) pesoEl.disabled = false;
+    } else {
+      pesoLabel.style.display = 'none';
+      if(pesoEl){ pesoEl.value = ''; pesoEl.disabled = true; }
+    }
+  }
+  if(funcionSection){
+    funcionSection.querySelectorAll('input,select').forEach((el) => { el.value = ''; el.disabled = true; });
+    funcionSection.style.display = 'none';
+  }
+  if($('pefCalc')) $('pefCalc').textContent = 'Función pulmonar deshabilitada para pacientes pediátricos.';
+}
+
+function updateAlgorithmUI(){
+  const algorithm = getSelectedAlgorithm();
+  const copy = ALGORITHM_COPY[algorithm] || ALGORITHM_COPY.asma;
+  document.title = copy.documentTitle;
+  if($('appTitle')) $('appTitle').textContent = copy.title;
+  if($('appSubtitle')) $('appSubtitle').textContent = copy.subtitle;
+  toggleAlgorithmElements('asma-only', algorithm === 'asma');
+  toggleAlgorithmElements('neumonia-only', algorithm === 'neumonia');
+  $('startReevalBtn').classList.toggle('hidden', algorithm !== 'asma');
+  clearRenderedState();
+  updateAgeSensitiveFields();
+}
+
 function calculatePEFPercent(medido, predicho){
   if(medido === null || predicho === null || predicho === 0) return null;
   const val = (medido / predicho) * 100;
@@ -284,7 +474,23 @@ function validateInputs(values){
   // predicho puede ser opcional - no forzamos
   if(values.fc !== null && values.fc <= 0) missing.push('Frecuencia cardíaca > 0');
   if(values.fr !== null && values.fr <= 0) missing.push('Frecuencia respiratoria > 0');
+  if(values.pas !== null && values.pas <= 0) missing.push('Presión arterial sistólica > 0');
+  if(values.pad !== null && values.pad <= 0) missing.push('Presión arterial diastólica > 0');
   if(values.sat !== null && (values.sat < 0 || values.sat > 100)) missing.push('SatO₂ entre 0 y 100');
+  return missing;
+}
+
+function validatePneumoniaInputs(values){
+  const missing = [];
+  if(values.edad === null || values.edad <= 0) missing.push('Edad > 0');
+  if(values.neu_infiltrado === '') missing.push('Radiografía / infiltrado');
+  if(values.fc !== null && values.fc <= 0) missing.push('Frecuencia cardíaca > 0');
+  if(values.fr !== null && values.fr <= 0) missing.push('Frecuencia respiratoria > 0');
+  if(values.pas !== null && values.pas <= 0) missing.push('Presión arterial sistólica > 0');
+  if(values.pad !== null && values.pad <= 0) missing.push('Presión arterial diastólica > 0');
+  if(values.sat !== null && (values.sat < 0 || values.sat > 100)) missing.push('SatO₂ entre 0 y 100');
+  const hasSymptoms = values.neu_fiebre === 'si' || values.neu_tos === 'seca' || values.neu_tos === 'productiva' || values.neu_expectoracion === 'si' || values.neu_dolor === 'si' || values.neu_dificultad === 'leve' || values.neu_dificultad === 'moderada' || values.neu_dificultad === 'marcada';
+  if(!hasSymptoms) missing.push('Al menos un síntoma compatible con NAC');
   return missing;
 }
 
@@ -422,6 +628,304 @@ function renderTreatment(sev){
   } else {
     container.textContent = 'No hay recomendación de tratamiento (datos insuficientes).';
   }
+}
+
+function gatherPneumoniaData(){
+  return {
+    edad: parseNumber($('edad').value),
+    fc: parseNumber($('fc').value),
+    fr: parseNumber($('fr').value),
+    pas: parseNumber($('pas').value),
+    pad: parseNumber($('pad').value),
+    sat: parseNumber($('sat').value),
+    neu_sexo: $('neu_sexo').value,
+    neu_fiebre: $('neu_fiebre').value,
+    neu_tos: $('neu_tos').value,
+    neu_expectoracion: $('neu_expectoracion').value,
+    neu_dolor: $('neu_dolor').value,
+    neu_dificultad: $('neu_dificultad').value,
+    neu_confusion: $('neu_confusion').value,
+    neu_infiltrado: $('neu_infiltrado').value,
+    neu_comorb: $('neu_comorb').checked,
+    neu_intolerancia: $('neu_intolerancia').checked,
+    neu_temp: parseNumber($('neu_temp').value),
+    neu_bun: parseNumber($('neu_bun').value),
+    neu_urea: parseNumber($('neu_urea').value),
+    neu_pafi: parseNumber($('neu_pafi').value),
+    neu_ats_ventilacion: $('neu_ats_ventilacion').checked,
+    neu_ats_vasopresores: $('neu_ats_vasopresores').checked,
+    neu_ats_multilobar: $('neu_ats_multilobar').checked,
+    neu_ats_leucopenia: $('neu_ats_leucopenia').checked,
+    neu_ats_trombocitopenia: $('neu_ats_trombocitopenia').checked,
+    neu_ats_fluidos: $('neu_ats_fluidos').checked,
+    neu_pes_respiratorio: $('neu_pes_respiratorio').checked,
+    neu_pes_renal_cronica: $('neu_pes_renal_cronica').checked,
+    neu_pseudo_abx90: $('neu_pseudo_abx90').checked,
+    neu_pseudo_hosp_rec: $('neu_pseudo_hosp_rec').checked,
+    neu_pseudo_corticoides: $('neu_pseudo_corticoides').checked,
+    neu_pseudo_epoc: $('neu_pseudo_epoc').checked,
+    neu_pseudo_prev: $('neu_pseudo_prev').checked,
+    neu_pseudo_bronq: $('neu_pseudo_bronq').checked,
+    neu_absceso_empiema: $('neu_absceso_empiema').checked
+  };
+}
+
+function pneumoniaBUNCriterion(data){
+  return (data.neu_bun !== null && data.neu_bun >= PNEUMONIA_PROTOCOL.curbBUN) || (data.neu_urea !== null && data.neu_urea > PNEUMONIA_PROTOCOL.curbUrea);
+}
+
+function calculateCurb65(data){
+  let score = 0;
+  const positive = [];
+  const missing = [];
+
+  if(data.neu_confusion === 'si'){
+    score += 1;
+    positive.push('Confusion');
+  }
+  if(data.neu_bun === null && data.neu_urea === null) missing.push('BUN/urea');
+  else if(pneumoniaBUNCriterion(data)){
+    score += 1;
+    positive.push(`BUN >= ${PNEUMONIA_PROTOCOL.curbBUN} mg/dl o urea > ${PNEUMONIA_PROTOCOL.curbUrea} mg/dl`);
+  }
+  if(data.fr === null) missing.push('Frecuencia respiratoria');
+  else if(data.fr >= PNEUMONIA_PROTOCOL.curbFr){
+    score += 1;
+    positive.push(`FR >= ${PNEUMONIA_PROTOCOL.curbFr} rpm`);
+  }
+  if(data.pas === null && data.pad === null) missing.push('Presion arterial');
+  else if((data.pas !== null && data.pas < PNEUMONIA_PROTOCOL.hypotensionPas) || (data.pad !== null && data.pad <= PNEUMONIA_PROTOCOL.hypotensionPad)){
+    score += 1;
+    positive.push(`Hipotension: PAS < ${PNEUMONIA_PROTOCOL.hypotensionPas} o PAD <= ${PNEUMONIA_PROTOCOL.hypotensionPad}`);
+  }
+  if(data.edad === null) missing.push('Edad');
+  else if(data.edad >= PNEUMONIA_PROTOCOL.curbAge){
+    score += 1;
+    positive.push(`Edad >= ${PNEUMONIA_PROTOCOL.curbAge} anos`);
+  }
+
+  let risk = 'bajo';
+  let disposition = 'AMBULATORIA';
+  if(score === 2){
+    risk = 'intermedio';
+    disposition = 'OBSERVACION';
+  } else if(score >= 3){
+    risk = 'alto';
+    disposition = 'HOSPITALARIA';
+  }
+
+  return { score, positive, missing, risk, disposition };
+}
+
+function calculateAtsIdsa(data){
+  const major = [];
+  const minor = [];
+  if(data.neu_ats_ventilacion) major.push('Ventilacion mecanica invasiva');
+  if(data.neu_ats_vasopresores) major.push('Necesidad de vasopresores');
+  if(data.fr !== null && data.fr > 30) minor.push('Frecuencia respiratoria >30 rpm');
+  if(data.neu_pafi !== null && data.neu_pafi <= PNEUMONIA_PROTOCOL.atsPafi) minor.push(`PaO2/FiO2 <= ${PNEUMONIA_PROTOCOL.atsPafi}`);
+  if(data.neu_ats_multilobar) minor.push('Infiltrados en varios lobulos');
+  if(data.neu_confusion === 'si') minor.push('Confusion/desorientacion');
+  if(pneumoniaBUNCriterion(data)) minor.push(`Uremia: BUN >= ${PNEUMONIA_PROTOCOL.curbBUN} mg/dl o urea > ${PNEUMONIA_PROTOCOL.curbUrea} mg/dl`);
+  if(data.neu_ats_leucopenia) minor.push('Leucocitos <4.000/mm3');
+  if(data.neu_ats_trombocitopenia) minor.push('Plaquetas <100.000/mm3');
+  if(data.neu_temp !== null && data.neu_temp < 36) minor.push('Temperatura <36 C');
+  if(data.neu_ats_fluidos) minor.push('Hipotension con necesidad de fluidoterapia agresiva');
+  return {
+    major,
+    minor,
+    majorCount: major.length,
+    minorCount: minor.length,
+    needsIcu: major.length >= 1 || minor.length >= PNEUMONIA_PROTOCOL.atsMinorThreshold
+  };
+}
+
+function calculatePES(data){
+  let score = 0;
+  const factors = [];
+  if(data.edad !== null && data.edad > 65){ score += 2; factors.push('Edad >65 anos: +2'); }
+  else if(data.edad !== null && data.edad >= 40){ score += 1; factors.push('Edad 40-65 anos: +1'); }
+  if(data.neu_sexo === 'hombre'){ score += 1; factors.push('Sexo masculino: +1'); }
+  if(data.neu_pes_respiratorio){ score += 2; factors.push('Trastorno respiratorio cronico: +2'); }
+  if(data.neu_confusion === 'si'){ score += 2; factors.push('Alteracion de la conciencia: +2'); }
+  if(data.neu_pes_renal_cronica){ score += 3; factors.push('Insuficiencia renal cronica: +3'); }
+  if(data.neu_fiebre === 'si'){ score -= 1; factors.push('Fiebre: -1'); }
+  return { score, factors, highRisk: score >= PNEUMONIA_PROTOCOL.pesThreshold };
+}
+
+function evaluatePneumonia(data){
+  const symptoms = [];
+  if(data.neu_fiebre === 'si') symptoms.push('Fiebre');
+  if(data.neu_tos === 'seca') symptoms.push('Tos seca');
+  if(data.neu_tos === 'productiva') symptoms.push('Tos productiva');
+  if(data.neu_expectoracion === 'si') symptoms.push('Expectoracion');
+  if(data.neu_dolor === 'si') symptoms.push('Dolor toracico pleuritico');
+  if(data.neu_dificultad === 'leve') symptoms.push('Disnea leve');
+  if(data.neu_dificultad === 'moderada') symptoms.push('Disnea moderada');
+  if(data.neu_dificultad === 'marcada') symptoms.push('Disnea marcada');
+  if(data.neu_infiltrado === 'compatible') symptoms.push('Radiografia compatible con NAC');
+  if(data.neu_infiltrado === 'pendiente') symptoms.push('Radiografia pendiente o no disponible');
+  if(data.neu_comorb) symptoms.push('Comorbilidades relevantes');
+  if(data.neu_intolerancia) symptoms.push('Deshidratacion o intolerancia a la via oral');
+
+  if(data.neu_infiltrado === 'no_compatible'){
+    return {
+      severity: 'MODERADA',
+      title: 'SOSPECHA DE NAC NO CONFIRMADA',
+      riskText: 'Nivel de riesgo: REEVALUAR DIAGNOSTICO',
+      criteria: symptoms.concat(['La radiografia no es compatible con neumonia adquirida en la comunidad.']),
+      treatment: PNEUMONIA_TREATMENT.initialTests.concat(PNEUMONIA_TREATMENT.notConfirmed),
+      oxygenAdvice: data.sat !== null && data.sat < PNEUMONIA_PROTOCOL.oxygenTarget ? `-> SatO2 ${data.sat}%: corregir hipoxemia mientras se redefine el diagnostico.` : '',
+      icuAdvice: '',
+      admissionList: ['La imagen no confirma NAC; completar estudio etiologico segun cuadro clinico.'],
+      icuList: ['Ninguno identificado'],
+      why: [
+        '1. Diagnostico\n   La radiografia no confirma neumonia adquirida en la comunidad.',
+        '\n2. Clinica\n   ' + (symptoms.length ? symptoms.join('\n   ') : 'Sin datos clinicos destacados.'),
+        '\n3. Conducta\n   Reevaluar diagnostico diferencial y completar estudios.'
+      ]
+    };
+  }
+
+  const curb = calculateCurb65(data);
+  const ats = calculateAtsIdsa(data);
+  const pes = calculatePES(data);
+
+  let disposition = 'AMBULATORIA';
+  if(curb.disposition === 'OBSERVACION') disposition = 'OBSERVACION';
+  if(curb.disposition === 'HOSPITALARIA') disposition = 'HOSPITALARIA';
+  if(ats.needsIcu) disposition = 'UCI';
+
+  let severity = 'LEVE';
+  let title = 'NEUMONIA NO GRAVE';
+  let riskText = 'Nivel de riesgo: BAJO - manejo ambulatorio';
+  let treatment = PNEUMONIA_TREATMENT.initialTests.concat(PNEUMONIA_TREATMENT.ambulatory);
+  let oxygenAdvice = '';
+  let icuAdvice = '';
+  const admissionList = [];
+  let icuList = ['Ninguno identificado'];
+
+  if(disposition === 'OBSERVACION'){
+    severity = 'MODERADA';
+    title = 'NEUMONIA CON RIESGO INTERMEDIO';
+    riskText = 'Nivel de riesgo: INTERMEDIO - valorar internacion corta';
+    treatment = PNEUMONIA_TREATMENT.initialTests.concat(PNEUMONIA_TREATMENT.observation, PNEUMONIA_TREATMENT.microbiology);
+    admissionList.push('CURB-65 = 2.');
+  }
+  if(disposition === 'HOSPITALARIA'){
+    severity = 'GRAVE';
+    title = 'NEUMONIA GRAVE';
+    riskText = 'Nivel de riesgo: ALTO - internacion hospitalaria';
+    treatment = PNEUMONIA_TREATMENT.initialTests.concat(PNEUMONIA_TREATMENT.microbiology, PNEUMONIA_TREATMENT.hospital);
+    admissionList.push('CURB-65 3-5.');
+  }
+  if(disposition === 'UCI'){
+    severity = 'GRAVE';
+    title = 'NEUMONIA GRAVE CON CRITERIOS DE UCI';
+    riskText = 'Nivel de riesgo: MUY ALTO - ingreso en UCI';
+    treatment = PNEUMONIA_TREATMENT.initialTests.concat(PNEUMONIA_TREATMENT.microbiology, PNEUMONIA_TREATMENT.icu, PNEUMONIA_TREATMENT.corticosteroids);
+    icuAdvice = 'Cumple criterios ATS/IDSA de ingreso en UCI.';
+    icuList = ats.major.concat(ats.minor);
+    admissionList.push('Cumple criterios ATS/IDSA para cuidados criticos.');
+  }
+  if(data.sat !== null && data.sat < PNEUMONIA_PROTOCOL.oxygenTarget){
+    oxygenAdvice = `-> SatO2 ${data.sat}%: administrar o considerar oxigeno para mantener SatO2 >= ${PNEUMONIA_PROTOCOL.oxygenTarget}%.`;
+    admissionList.push(`Hipoxemia con SatO2 < ${PNEUMONIA_PROTOCOL.oxygenTarget}%.`);
+  }
+  if(data.neu_infiltrado === 'compatible') admissionList.push('Radiografia compatible con neumonia.');
+  if(data.neu_comorb) admissionList.push('Comorbilidades relevantes.');
+  if(data.neu_intolerancia) admissionList.push('No tolera via oral o riesgo de deshidratacion.');
+
+  const resistantNotes = [];
+  if(pes.highRisk){
+    treatment = treatment.concat(PNEUMONIA_TREATMENT.multiresistant);
+    resistantNotes.push(`PES = ${pes.score} (>= ${PNEUMONIA_PROTOCOL.pesThreshold})`);
+    admissionList.push(`Riesgo de microorganismos multirresistentes por PES elevado (${pes.score}).`);
+  }
+  const pseudomonasRisk = data.neu_pseudo_abx90 || data.neu_pseudo_hosp_rec || data.neu_pseudo_corticoides || data.neu_pseudo_epoc || data.neu_pseudo_prev || data.neu_pseudo_bronq;
+  if(pseudomonasRisk){
+    treatment = treatment.concat(PNEUMONIA_TREATMENT.pseudomonas);
+    resistantNotes.push('Factores de riesgo para Pseudomonas');
+  }
+  if(data.neu_absceso_empiema){
+    treatment = treatment.concat(PNEUMONIA_TREATMENT.anaerobes);
+    resistantNotes.push('Absceso pulmonar o empiema pleural');
+  }
+
+  const criteria = [];
+  criteria.push(...symptoms);
+  criteria.push(`CURB-65 = ${curb.score} (${curb.risk})`);
+  if(curb.positive.length) criteria.push(...curb.positive);
+  if(ats.needsIcu) criteria.push(`ATS/IDSA positivo: ${ats.majorCount} criterio(s) mayor(es) y ${ats.minorCount} menor(es)`);
+  if(resistantNotes.length) criteria.push(...resistantNotes);
+
+  const why = [];
+  why.push('1. Diagnostico clinico\n   ' + (symptoms.length ? symptoms.join('\n   ') : 'Sin sintomas destacados.'));
+  why.push(`\n2. CURB-65\n   Puntaje = ${curb.score} (${curb.risk}).` + (curb.positive.length ? '\n   ' + curb.positive.join('\n   ') : '') + (curb.missing.length ? `\n   Datos faltantes: ${curb.missing.join(', ')}.` : ''));
+  why.push(`\n3. ATS/IDSA UCI\n   Criterios mayores: ${ats.majorCount}. Criterios menores: ${ats.minorCount}.` + (ats.major.length ? '\n   ' + ats.major.join('\n   ') : '') + (ats.minor.length ? '\n   ' + ats.minor.join('\n   ') : ''));
+  why.push(`\n4. PES\n   Puntaje = ${pes.score}.` + (pes.factors.length ? '\n   ' + pes.factors.join('\n   ') : ' Sin factores registrados.'));
+  why.push(`\n5. Clasificacion\n   ${title}`);
+
+  return {
+    severity,
+    title,
+    riskText,
+    criteria: Array.from(new Set(criteria)),
+    treatment: Array.from(new Set(treatment)),
+    oxygenAdvice,
+    icuAdvice,
+    admissionList: Array.from(new Set(admissionList.length ? admissionList : ['No se identifican criterios mayores de internacion con los datos cargados.'])),
+    icuList,
+    why
+  };
+}
+
+function renderPneumoniaResult(data){
+  const result = evaluatePneumonia(data);
+  const titleEl = $('classificationTitle');
+  const criteriaList = $('criteriaList');
+  criteriaList.innerHTML = '';
+
+  window.__lastSeverity = null;
+  titleEl.textContent = result.title;
+  titleEl.className = 'classification severity-' + result.severity;
+  $('riskLevel').textContent = result.riskText;
+  $('reevalNotice').textContent = 'La reevaluacion dinamica permanece disponible solo para el algoritmo de asma.';
+
+  result.criteria.forEach((item) => {
+    const li = document.createElement('li');
+    li.textContent = '✓ ' + item;
+    criteriaList.appendChild(li);
+  });
+
+  const treatmentContainer = $('treatmentContent');
+  treatmentContainer.innerHTML = '';
+  result.treatment.forEach((item) => {
+    const line = document.createElement('div');
+    line.textContent = '• ' + item;
+    treatmentContainer.appendChild(line);
+  });
+
+  $('oxygenAdvice').textContent = result.oxygenAdvice;
+  $('magnesiumAdvice').textContent = '';
+  $('icuAdvice').textContent = result.icuAdvice;
+  $('whyContent').textContent = result.why.join('\n');
+
+  const admissionListEl = $('admissionList');
+  admissionListEl.innerHTML = '';
+  result.admissionList.forEach((item) => {
+    const li = document.createElement('li');
+    li.textContent = '✓ ' + item;
+    admissionListEl.appendChild(li);
+  });
+
+  const icuListEl = $('icuList');
+  icuListEl.innerHTML = '';
+  result.icuList.forEach((item) => {
+    const li = document.createElement('li');
+    li.textContent = item === 'Ninguno identificado' ? item : '✓ ' + item;
+    icuListEl.appendChild(li);
+  });
 }
 
 function renderResult(data){
@@ -575,6 +1079,7 @@ function gatherFormData(){
     fc: parseNumber($('fc').value),
     fr: parseNumber($('fr').value),
     pas: parseNumber($('pas').value),
+    pad: parseNumber($('pad').value),
     sat: parseNumber($('sat').value),
     funcion_tipo: $('funcion_tipo').value,
     valor_medido: parseNumber($('valor_medido').value),
@@ -587,10 +1092,26 @@ function gatherFormData(){
 }
 
 function handleEvaluate(){
+  if(getSelectedAlgorithm() === 'neumonia'){
+    const pneumoniaData = gatherPneumoniaData();
+    const pneumoniaMissing = validatePneumoniaInputs(pneumoniaData);
+    if(pneumoniaMissing.length){
+      $('classificationTitle').textContent = 'Faltan datos para completar la evaluación.';
+      $('riskLevel').textContent = 'Nivel de riesgo: —';
+      $('criteriaList').innerHTML = '';
+      $('treatmentContent').textContent = '';
+      $('whyContent').textContent = 'Faltan: ' + pneumoniaMissing.join(', ');
+      return;
+    }
+    renderPneumoniaResult(pneumoniaData);
+    return;
+  }
+
   const data = gatherFormData();
   const missing = validateInputs(data);
   if(missing.length){
     $('classificationTitle').textContent = 'Faltan datos para completar la evaluación.';
+    $('riskLevel').textContent = 'Nivel de riesgo: —';
     $('criteriaList').innerHTML='';
     $('treatmentContent').textContent='';
     $('whyContent').textContent = 'Faltan: ' + missing.join(', ');
@@ -611,11 +1132,19 @@ function handleEvaluate(){
 }
 
 function showReevalSection(){
+  if(getSelectedAlgorithm() !== 'asma'){
+    showMessage('La reevaluación dinámica está disponible solo para asma.');
+    return;
+  }
   $('reevalSection').classList.remove('hidden');
   $('reevalSection').scrollIntoView({behavior:'smooth'});
 }
 
 function handleEvaluateReeval(){
+  if(getSelectedAlgorithm() !== 'asma'){
+    showMessage('La reevaluación dinámica está disponible solo para asma.');
+    return;
+  }
   if(!window.__initial){ showMessage('Primero realizar evaluación inicial.'); return; }
   const r = {
     disnea: $('r_disnea').value,
@@ -630,64 +1159,49 @@ function handleEvaluateReeval(){
   };
   r.pefPercent = calculatePEFPercent(r.valor_medido, r.valor_predicho);
 
-  // build combined data object for ICU/admission checks
   const combined = Object.assign({}, window.__initial);
   combined.reeval = r;
-  // determine response
   const good = (r.pefPercent !== null && r.pefPercent > 60) || (r.sat !== null && r.sat > PROTOCOL.oxygenTarget) || (r.disnea === 'leve' || r.disnea === '');
   const response = good ? 'BUENA RESPUESTA' : 'MALA RESPUESTA';
-  // populate table
+
   $('r_c_fc').textContent = r.fc !== null ? r.fc : '—';
   $('r_c_fr').textContent = r.fr !== null ? r.fr : '—';
-  $('r_c_sat').textContent = r.sat !== null ? r.sat+'%' : '—';
-  $('r_c_pef').textContent = r.pefPercent !== null ? r.pefPercent+'%' : '—';
+  $('r_c_sat').textContent = r.sat !== null ? r.sat + '%' : '—';
+  $('r_c_pef').textContent = r.pefPercent !== null ? r.pefPercent + '%' : '—';
   $('r_c_disnea').textContent = r.disnea || '—';
 
   $('e_fc').textContent = (window.__initial.fc !== null && r.fc !== null) ? (r.fc - window.__initial.fc > 0 ? `↑ ${r.fc - window.__initial.fc}` : `↓ ${window.__initial.fc - r.fc}`) : '—';
   $('e_fr').textContent = (window.__initial.fr !== null && r.fr !== null) ? (r.fr - window.__initial.fr > 0 ? `↑ ${r.fr - window.__initial.fr}` : `↓ ${window.__initial.fr - r.fr}`) : '—';
   $('e_sat').textContent = (window.__initial.sat !== null && r.sat !== null) ? (r.sat - window.__initial.sat > 0 ? `↑ ${r.sat - window.__initial.sat}%` : `↓ ${window.__initial.sat - r.sat}%`) : '—';
-  $('e_pef').textContent = (window.__initial.pefPercent !== null && r.pefPercent !== null) ? (Math.round((r.pefPercent - window.__initial.pefPercent)*10)/10 + ' puntos porcentuales') : '—';
+  $('e_pef').textContent = (window.__initial.pefPercent !== null && r.pefPercent !== null) ? (Math.round((r.pefPercent - window.__initial.pefPercent) * 10) / 10 + ' puntos porcentuales') : '—';
   $('e_disnea').textContent = (window.__initial.disnea && r.disnea) ? (window.__initial.disnea === r.disnea ? 'Sin cambio' : `${window.__initial.disnea} → ${r.disnea}`) : '—';
 
   $('reevalResult').classList.remove('hidden');
   $('responseResult').textContent = response === 'BUENA RESPUESTA' ? 'BUENA RESPUESTA AL TRATAMIENTO' : 'MALA RESPUESTA AL TRATAMIENTO';
-  if(response === 'BUENA RESPUESTA') $('responseResult').style.color = 'var(--success)'; else $('responseResult').style.color = 'var(--danger)';
+  $('responseResult').style.color = response === 'BUENA RESPUESTA' ? 'var(--success)' : 'var(--danger)';
 
-  // admission criteria
   const admission = evaluateAdmissionCriteria(Object.assign({}, combined), true);
-  const admissionListEl = $('admissionList'); admissionListEl.innerHTML='';
+  const admissionListEl = $('admissionList');
+  admissionListEl.innerHTML = '';
   if(admission.length === 0){ const li = document.createElement('li'); li.textContent = 'Ninguno identificado'; admissionListEl.appendChild(li); }
-  else admission.forEach(it => { const li=document.createElement('li'); li.textContent='✓ '+it; admissionListEl.appendChild(li); });
+  else admission.forEach((it) => { const li = document.createElement('li'); li.textContent = '✓ ' + it; admissionListEl.appendChild(li); });
 
-  // ICU
   const icu = evaluateICUCritera(combined);
-  const icuListEl = $('icuList'); icuListEl.innerHTML='';
+  const icuListEl = $('icuList');
+  icuListEl.innerHTML = '';
   if(icu.length === 0){ const li = document.createElement('li'); li.textContent = 'Ninguno identificado'; icuListEl.appendChild(li); }
-  else icu.forEach(it => { const li=document.createElement('li'); li.textContent='✓ '+it; icuListEl.appendChild(li); });
+  else icu.forEach((it) => { const li = document.createElement('li'); li.textContent = '✓ ' + it; icuListEl.appendChild(li); });
 
-  // set stored reeval result
-  window.__initial.reeval = { ...r, response: response };
+  window.__initial.reeval = { ...r, response };
 }
-
-// Nota: la inicialización de eventos se realiza en `init()` para evitar doble enlazado.
 
 function resetCalculator(){
   if(!confirm('Confirmar: ¿desea iniciar una nueva evaluación y borrar los datos actuales?')) return;
   document.getElementById('calcForm').reset();
-  $('classificationTitle').textContent = '—';
-  $('riskLevel').textContent = 'Nivel de riesgo: —';
-  $('criteriaList').innerHTML='';
-  $('treatmentContent').innerHTML='';
-  $('oxygenAdvice').textContent='';
-  $('magnesiumAdvice').textContent='';
-  $('icuAdvice').textContent='';
-  $('whyContent').textContent='';
-  $('admissionList').innerHTML='';
-  $('icuList').innerHTML='';
-  $('reevalSection').classList.add('hidden');
-  $('reevalResult').classList.add('hidden');
-  window.__initial = null;
-  window.__lastSeverity = null;
+  clearRenderedState();
+  updateAlgorithmUI();
+  updateDisneaAdvice('', 'disneaAdvice');
+  updateDisneaAdvice('', 'r_disneaAdvice');
 }
 
 function init(){
@@ -704,65 +1218,23 @@ function init(){
   const disneaEl = $('disnea');
   if(disneaEl){ disneaEl.addEventListener('change', () => updateDisneaAdvice(disneaEl.value)); updateDisneaAdvice(disneaEl.value); }
   const rdisEl = $('r_disnea');
-  if(rdisEl){ rdisEl.addEventListener('change', () => updateDisneaAdvice(rdisEl.value,'r_disneaAdvice')); updateDisneaAdvice(rdisEl.value,'r_disneaAdvice'); }
+  if(rdisEl){ rdisEl.addEventListener('change', () => updateDisneaAdvice(rdisEl.value, 'r_disneaAdvice')); updateDisneaAdvice(rdisEl.value, 'r_disneaAdvice'); }
 
-  // Enable/disable adult-only fields (sexo, talla) depending on edad (>15 años)
   const edadEl = $('edad');
+  const algoritmoEl = $('algoritmo');
   const sexoEl = $('sexo');
   const tallaEl = $('talla');
-  const pesoEl = $('peso');
-  function updateAdultFields(){
-    const age = parseNumber(edadEl ? edadEl.value : null);
-    const isAdult = age !== null && age >= 15;
-    const isPediatric = age !== null && age < 15;
-    const adultSexoLabel = $('adultSexoLabel');
-    const adultTallaLabel = $('adultTallaLabel');
-    const pesoLabel = $('pesoLabel');
-    const funcionSection = $('funcionSection');
 
-    if(isAdult){
-      // show adult fields
-      if(adultSexoLabel) adultSexoLabel.style.display = '';
-      if(adultTallaLabel) adultTallaLabel.style.display = '';
-      if(sexoEl) sexoEl.disabled = false;
-      if(tallaEl) tallaEl.disabled = false;
-      // hide peso for adults
-      if(pesoLabel) pesoLabel.style.display = 'none';
-      if(pesoEl){ pesoEl.value = ''; pesoEl.disabled = true; }
-      // enable pulmonary function for adults
-      if(funcionSection){
-        funcionSection.style.display = '';
-        funcionSection.querySelectorAll('input,select').forEach(el => { el.disabled = false; });
-      }
-      updatePredictedField();
-    } else {
-      // hide adult-only fields and clear their values
-      if(adultSexoLabel) adultSexoLabel.style.display = 'none';
-      if(adultTallaLabel) adultTallaLabel.style.display = 'none';
-      if(sexoEl){ sexoEl.value = ''; sexoEl.disabled = true; sexoEl.dispatchEvent(new Event('change',{bubbles:true})); }
-      if(tallaEl){ tallaEl.value = ''; tallaEl.disabled = true; tallaEl.dispatchEvent(new Event('input',{bubbles:true})); }
+  if(edadEl) edadEl.addEventListener('input', updateAgeSensitiveFields);
+  if(algoritmoEl) algoritmoEl.addEventListener('change', updateAlgorithmUI);
+  updateAlgorithmUI();
 
-      // peso: only show when explicitly pediatric (edad < 15)
-      if(pesoLabel){
-        if(isPediatric){ pesoLabel.style.display = ''; if(pesoEl) pesoEl.disabled = false; }
-        else { pesoLabel.style.display = 'none'; if(pesoEl){ pesoEl.value = ''; pesoEl.disabled = true; } }
-      }
-
-      // disable and clear pulmonary function inputs for pediatric patients and unknown age
-      if(funcionSection){
-        funcionSection.querySelectorAll('input,select').forEach(el => { el.value = ''; el.disabled = true; el.dispatchEvent(new Event('input',{bubbles:true})); });
-        funcionSection.style.display = 'none';
-        if($('pefCalc')) $('pefCalc').textContent = 'Función pulmonar deshabilitada para pacientes pediátricos.';
-      }
-    }
-  }
-  if(edadEl){ edadEl.addEventListener('input', updateAdultFields); updateAdultFields(); }
   if(sexoEl) sexoEl.addEventListener('change', updatePredictedField);
   if(tallaEl) tallaEl.addEventListener('input', updatePredictedField);
+
   const pesoElInput = $('peso');
   if(pesoElInput){ pesoElInput.addEventListener('input', () => { if(window.__lastSeverity) renderTreatment(window.__lastSeverity); }); }
 
-  // show PEF calculation dynamically
   const updatePEF = () => {
     const med = parseNumber($('valor_medido').value);
     const pred = parseNumber($('valor_predicho').value);
@@ -770,38 +1242,37 @@ function init(){
     const out = $('pefCalc');
     const pct = calculatePEFPercent(med, pred);
     if(pct === null){
-      out.textContent = tipo + ': cálculo PEF% no disponible (falta valor medido o predicho).';
+      out.textContent = tipo + ': calculo PEF% no disponible (falta valor medido o predicho).';
     } else {
       out.textContent = `${tipo} %\n${med} / ${pred} × 100 = ${pct}%`;
     }
   };
-  ['valor_medido','valor_predicho','funcion_tipo'].forEach(id => { $(id).addEventListener('input', updatePEF); });
-  // Ripple helpers (Material-like ripple for buttons)
+  ['valor_medido','valor_predicho','funcion_tipo'].forEach((id) => { $(id).addEventListener('input', updatePEF); });
+
   function createRipple(el, evt){
     const rect = el.getBoundingClientRect();
     const ripple = document.createElement('span');
     ripple.className = 'ripple';
     const size = Math.max(rect.width, rect.height) * 1.2;
     ripple.style.width = ripple.style.height = size + 'px';
-    ripple.style.left = (evt.clientX - rect.left - size/2) + 'px';
-    ripple.style.top = (evt.clientY - rect.top - size/2) + 'px';
+    ripple.style.left = (evt.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (evt.clientY - rect.top - size / 2) + 'px';
     el.appendChild(ripple);
-    setTimeout(()=>{ try{ ripple.remove(); }catch(e){} }, 700);
+    setTimeout(() => { try { ripple.remove(); } catch (e) {} }, 700);
   }
 
   function attachRipples(){
-    document.querySelectorAll('button').forEach(btn => {
+    document.querySelectorAll('button').forEach((btn) => {
       btn.classList.add('material-button');
       btn.addEventListener('pointerdown', function(e){
         createRipple(this, e);
       });
     });
   }
-  // attach ripples to buttons in the form
+
   attachRipples();
 }
 
-// Inicializar
 document.addEventListener('DOMContentLoaded', init);
 
 /*
@@ -809,29 +1280,29 @@ document.addEventListener('DOMContentLoaded', init);
 
   Caso 1 — Crisis leve
   - PEF predicho 482, medido 350 (PEF 72.6%)
-  - SatO₂ 96
+  - SatO2 96
   - Disnea leve, habla en párrafos
   Resultado esperado: Crisis leve
 
   Caso 2 — Crisis moderada
   - PEF predicho 482, medido 280 (PEF 58.1%)
-  - FR 24, SatO₂ 94
+  - FR 24, SatO2 94
   Resultado esperado: Crisis moderada
 
   Caso 3 — Crisis grave
   - PEF predicho 482, medido 180 (PEF 37.3%)
-  - FR 32, FC 126, SatO₂ 88
+  - FR 32, FC 126, SatO2 88
   Resultado esperado: Crisis grave
 
   Caso 4 — Riesgo vital
   - Alteración de conciencia = "disminuido"
   - Silencio auscultatorio
-  - SatO₂ 88
+  - SatO2 88
   Resultado: CRISIS CON RIESGO VITAL (prevalece sobre PEF)
 
   Caso 5 — Buena respuesta
-  - Inicial: PEF 38%, SatO₂ 89%, grave/moderado
-  - Post: PEF 65%, SatO₂ 93%, mejoría clínica
+  - Inicial: PEF 38%, SatO2 89%, grave/moderado
+  - Post: PEF 65%, SatO2 93%, mejoría clínica
   Resultado: BUENA RESPUESTA / considerar criterios de alta
 
   Caso 6 — Mala respuesta
