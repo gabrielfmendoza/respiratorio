@@ -274,21 +274,22 @@ const CLINICAL_RULES = {
 // Pediatric treatment guidance (textual; dosajes por kg segun guía)
 CLINICAL_RULES.treatment.pediatric = {
   leve: [
-    "Salbutamol: aerosol 2 disparos con aerocámara o nebulización (0.125–0.25 mg/kg) cada 20 min durante 1 hora.",
-    "Buena respuesta: observación 1 h; egreso con β2 cada 4–6 h y control en 48 h."
+    "Manejo domiciliario: Salbutamol 2 puff con aerocámara cada 4 horas.",
+    "La crisis leve va sin rescate inicial. Si no mejora, consultar para realizar rescate con Salbutamol cada 20 minutos según el algoritmo."
   ],
   moderada: [
     "Oxígeno humidificado para mantener SatO₂ > 95%.",
-    "Salbutamol: nebulización 0.25 mg/kg cada 20 min durante 1 hora; luego cada 2–4 h según necesidad.",
+    "Rescate: Salbutamol 4 a 8 puff, hasta 10 puff según gravedad, cada 20 minutos durante 1 hora.",
     "Corticoides: Metilprednisolona VO 1–2 mg/kg/día (máx 40 mg) o Hidrocortisona EV 5 mg/kg cada 6 h.",
     "Observación 2 h; egreso con β2 + corticoide VO si respuesta buena."
   ],
   grave: [
     "Internación inmediata + O₂ humidificado.",
-    "Salbutamol: nebulización cada 20 min o administración continua (0.5 mg/kg/h según protocolo).",
+    "Rescate: Salbutamol 4 a 8 puff, hasta 10 puff según gravedad, cada 20 minutos durante 1 hora.",
     "Agregar Ipratropio: 0.25 mg (<6 años) o 0.5 mg (>6 años) cada 20 min durante 1 h, luego cada 6–8 h.",
     "Corticoides EV + hidratación: Hidrocortisona 5 mg/kg cada 6 h.",
-    "Si mala respuesta: considerar UTI y aminofilina (bolo 5–6 mg/kg + mant. 0.7 mg/kg/h)."
+    "Si no responde: administrar Sulfato de Magnesio EV 25–50 mg/kg (máximo 2 g) en infusión lenta.",
+    "Si persiste la mala respuesta: considerar UTI."
   ]
 };
 
@@ -349,6 +350,8 @@ function updateAgeSensitiveFields(){
   const algorithm = getSelectedAlgorithm();
   const isAdult = age !== null && age >= 15;
   const isPediatric = age !== null && age < 15;
+  const pressureLabels = document.querySelectorAll('.asma-adult-pressure');
+  const hideAsthmaPressure = algorithm === 'asma' && isPediatric;
   const adultSexoLabel = $('adultSexoLabel');
   const adultTallaLabel = $('adultTallaLabel');
   const pesoLabel = $('pesoLabel');
@@ -356,6 +359,15 @@ function updateAgeSensitiveFields(){
   const tallaEl = $('talla');
   const pesoEl = $('peso');
   const funcionSection = $('funcionSection');
+
+  pressureLabels.forEach((label) => {
+    label.style.display = hideAsthmaPressure ? 'none' : '';
+    const input = label.querySelector('input');
+    if(input){
+      input.disabled = hideAsthmaPressure;
+      if(hideAsthmaPressure) input.value = '';
+    }
+  });
 
   if(algorithm !== 'asma'){
     if(adultSexoLabel) adultSexoLabel.style.display = 'none';
@@ -501,7 +513,9 @@ function evaluateLifeThreatening(data){
   if(L.silenceAuscultation(data.sibilancias)) detected.push('Silencio auscultatorio');
   if(L.paradoxical(data.paradojico)) detected.push('Movimiento paradójico toracoabdominal');
   if(L.bradycardia(data.fc)) detected.push('Bradicardia (FC baja)');
-  if(L.hypotension(data.pas, data.pad)) detected.push('Hipotensión (PAS <90 mmHg)');
+  if(data.edad === null || data.edad >= 15){
+    if(L.hypotension(data.pas, data.pad)) detected.push('Hipotensión (PAS <90 mmHg)');
+  }
   if(L.hypercapnia(data.paco2)) detected.push('Hipercapnia significativa (PaCO₂ elevada)');
   if(L.satLow90(data.sat)) detected.push('SatO₂ <90%');
   if(L.muscularFatigue(data.musculatura)) detected.push('Signos de fatiga muscular');
@@ -587,28 +601,20 @@ function renderTreatment(sev){
     if(peso && peso > 0){
       const doseBox = document.createElement('div'); doseBox.style.marginTop='8px'; doseBox.style.fontStyle='italic';
       if(sev === 'LEVE'){
-        const salbMin = (0.125 * peso).toFixed(2);
-        const salbMax = (0.25 * peso).toFixed(2);
-        doseBox.innerHTML = `Ejemplos de dosis según peso (${peso} kg) — LEVE: Salbutamol 0.125–0.25 mg/kg (cada 20 min durante 1 h) → ${salbMin}–${salbMax} mg por dosis.`;
+        doseBox.innerHTML = `Pauta domiciliaria (${peso} kg) — Salbutamol 2 puff con aerocámara cada 4 horas; si no mejora, consultar.`;
       } else if(sev === 'MODERADA'){
-        const salb = (0.25 * peso).toFixed(2);
         const met1 = (1 * peso).toFixed(1);
         const met2 = (2 * peso).toFixed(1);
         const hidroc = (5 * peso).toFixed(1);
-        doseBox.innerHTML = `Ejemplos de dosis según peso (${peso} kg) — MODERADA: Salbutamol 0.25 mg/kg → ${salb} mg; Metilprednisolona VO 1–2 mg/kg/día → ${met1}–${met2} mg/día; Hidrocortisona EV 5 mg/kg → ${hidroc} mg por dosis.`;
+        doseBox.innerHTML = `Ejemplos de dosis según peso (${peso} kg) — MODERADA: rescate con Salbutamol 4 a 8 puff, hasta 10 puff según gravedad, cada 20 minutos; Metilprednisolona VO 1–2 mg/kg/día → ${met1}–${met2} mg/día; Hidrocortisona EV 5 mg/kg → ${hidroc} mg por dosis.`;
       } else if(sev === 'GRAVE'){
-        const contSalb = (0.5 * peso).toFixed(2);
         const iprat = (age !== null && age < 6) ? '0.25 mg' : '0.5 mg';
-        const aminMin = (5 * peso).toFixed(1);
-        const aminMax = (6 * peso).toFixed(1);
-        const aminMaint = (0.7 * peso).toFixed(2);
-        doseBox.innerHTML = `Ejemplos de dosis según peso (${peso} kg) — GRAVE: Salbutamol infusión continua ~0.5 mg/kg/h → ${contSalb} mg/h; Ipratropio inhalado: ${iprat}; Aminofilina: bolo 5–6 mg/kg → ${aminMin}–${aminMax} mg; mant. ~0.7 mg/kg/h → ${aminMaint} mg/h.`;
+        const magMin = (25 * peso).toFixed(0);
+        const magMax = Math.min(50 * peso, 2000).toFixed(0);
+        doseBox.innerHTML = `Ejemplos de dosis según peso (${peso} kg) — GRAVE: rescate con Salbutamol 4 a 8 puff, hasta 10 puff según gravedad, cada 20 minutos; Ipratropio inhalado: ${iprat}; Sulfato de Magnesio EV 25–50 mg/kg → ${magMin}–${magMax} mg (máximo 2 g) si no responde.`;
       } else {
-        const salbLeveMin = (0.125 * peso).toFixed(2);
-        const salbLeveMax = (0.25 * peso).toFixed(2);
-        const salbMod = (0.25 * peso).toFixed(2);
         const hidroc = (5 * peso).toFixed(1);
-        doseBox.innerHTML = `Ejemplos de dosis según peso (${peso} kg): Salbutamol 0.125–0.25 mg/kg → ${salbLeveMin}–${salbLeveMax} mg; Salbutamol moderada 0.25 mg/kg → ${salbMod} mg; Hidrocortisona EV 5 mg/kg → ${hidroc} mg.`;
+        doseBox.innerHTML = `Ejemplos de dosis según peso (${peso} kg): Hidrocortisona EV 5 mg/kg → ${hidroc} mg por dosis, según la gravedad y la respuesta.`;
       }
       container.appendChild(doseBox);
     }
