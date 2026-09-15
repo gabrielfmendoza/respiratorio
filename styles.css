@@ -42,6 +42,10 @@ body{
 h1{margin:0;font-size:1.4rem;font-weight:700}
 .subtitle{margin:6px 0;color:var(--md-muted);font-weight:500}
 .warning{background:#fff8e1;color:#6b3b00;padding:10px;border-radius:8px;font-size:0.95rem;margin-top:10px;border-left:4px solid var(--md-warning)}
+.header-actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+.jump-link{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;background:linear-gradient(180deg,var(--celeste-500),var(--celeste-600));color:#fff;text-decoration:none;font-weight:700;box-shadow:var(--elevation-2);transition:transform .12s ease,box-shadow .12s ease}
+.jump-link:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(15,98,172,0.14)}
+.jump-link:focus{outline:3px solid rgba(21,101,192,0.18);outline-offset:2px}
 
 .card{background:var(--md-surface);padding:18px;margin:14px 0;border-radius:var(--radius);box-shadow:var(--elevation-1)}
 .card h2{margin:0 0 8px 0;font-size:1.05rem}
@@ -170,3 +174,27 @@ button{position:relative;overflow:hidden}
 /* minor polish for table and lists */
 .compare th{background:var(--celeste-100)}
 .criteria li{padding:4px 0}
+
+.theory-section{scroll-margin-top:24px}
+.theory-intro{margin:0 0 14px;color:var(--md-muted)}
+.theory-source,.theory-page{border:1px solid #d9ecf8;border-radius:12px;background:linear-gradient(180deg,#ffffff,#fafdff)}
+.theory-source + .theory-source{margin-top:14px}
+.theory-page{margin-top:12px}
+.theory-source summary,.theory-page summary{cursor:pointer;list-style:none;padding:14px 16px;font-weight:700;position:relative}
+.theory-source summary::-webkit-details-marker,.theory-page summary::-webkit-details-marker{display:none}
+.theory-source summary::after,.theory-page summary::after{content:'+';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:1.1rem;color:var(--celeste-700)}
+.theory-source[open] summary::after,.theory-page[open] summary::after{content:'−'}
+.theory-content{padding:0 16px 18px;border-top:1px solid #e7f3fb}
+.theory-content h3,.theory-content h4{margin:16px 0 8px}
+.theory-content p{margin:10px 0;line-height:1.55}
+.theory-content ul,.theory-content ol{margin:10px 0;padding-left:20px}
+.theory-content li{margin:6px 0;line-height:1.5}
+.theory-table-wrap{overflow-x:auto;margin:12px 0}
+.theory-table{width:100%;border-collapse:collapse;min-width:720px}
+.theory-table th,.theory-table td{padding:10px 12px;border:1px solid #dcecf7;text-align:left;vertical-align:top;line-height:1.45}
+.theory-table th{background:var(--celeste-100);font-weight:700}
+
+@media (max-width:900px){
+  .theory-source summary,.theory-page summary{padding-right:40px}
+  .theory-table{min-width:640px}
+}
